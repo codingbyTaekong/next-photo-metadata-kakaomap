@@ -1,0 +1,16 @@
+{
+  "extends": ["./node_modules/gts/", "next/core-web-vitals"],
+  "rules": {
+    "react/react-in-jsx-scope": "off",						// 추가
+    "prettier/prettier": ["error", {"endOfLine": "auto"}]	// 추가
+  },
+  "env": {
+    "browser": true,
+    "jest": true,
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
+}
