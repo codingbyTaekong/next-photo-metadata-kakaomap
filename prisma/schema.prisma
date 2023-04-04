@@ -1,0 +1,26 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Area {
+  idx  Int    @id @unique(map: "idx_UNIQUE") @default(autoincrement())
+  name String @db.VarChar(100)
+  type String @db.VarChar(45)
+  AreaPoint AreaPoint[]
+}
+
+model AreaPoint {
+  idx Int    @id @unique(map: "idx_UNIQUE") @default(autoincrement())
+  lat String @db.VarChar(100)
+  lng String @db.VarChar(100)
+  areaId Int
+  area   Area @relation(fields: [areaId], references: [idx], onDelete: Cascade)
+}
