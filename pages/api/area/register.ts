@@ -13,20 +13,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 
     if (polygon.length !==0) {
 
-      console.log(typeof polygon[0][0].x)
-      console.log(polygon.length)
-      console.log(rectangle.length)
-      console.log(circle.length)
+      // console.log(typeof polygon[0][0].x)
+      // console.log(polygon.length)
+      // console.log(rectangle.length)
+      // console.log(circle.length)
       const Area = await prismadb.area.create({
           data : {
               name,
-              type : '테스트 타입',
+              type : 'testType',
               polygon : {
-                create : {
+                create : polygon.map((poly : any) => ({
                   points : {
-                    create : polygon
+                    create : poly
                   }
-                }
+                }))
               },
               rectangle : {
                 create : rectangle
@@ -36,11 +36,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               },
           },
           include : {
-            polygon : true,
+            polygon : {
+              include : {
+                points : true
+              }
+            },
             rectangle : true,
             circle : true,
           }
       })
+
       return res.status(200)
       // return res.status(200).json(Area)
     } else {

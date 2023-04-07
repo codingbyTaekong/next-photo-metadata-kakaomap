@@ -21,22 +21,10 @@ model Area {
   @@map("AREA")
 }
 
-
-
-model Circle {
-  idx Int @id @unique(map: "idx_UNIQUE") @default(autoincrement())
-  centerX Float
-  centerY Float
-  radius Float
-  areaId Int
-  area   Area @relation(fields: [areaId], references: [idx], onDelete: NoAction)
-  @@map("CIRCLE")
-}
-
 model Polygon {
   idx Int @id @unique(map: "idx_UNIQUE") @default(autoincrement())
-  areaId Int?
-  area   Area? @relation(fields: [areaId], references: [idx], onDelete: NoAction)
+  areaId Int
+  area   Area @relation(fields: [areaId], references: [idx])
   points PolygonPoints[]
   @@map("POLYGON")
 }
@@ -49,6 +37,22 @@ model PolygonPoints {
   polygon Polygon @relation(fields: [polygonId], references: [idx])
   @@map("POLYGONPOINTS")
 }
+
+
+
+
+
+
+model Circle {
+  idx Int @id @unique(map: "idx_UNIQUE") @default(autoincrement())
+  centerX Float
+  centerY Float
+  radius Float
+  areaId Int
+  area   Area @relation(fields: [areaId], references: [idx])
+  @@map("CIRCLE")
+}
+
 
 model Rectangle {
   idx Int @id @unique(map: "idx_UNIQUE") @default(autoincrement())
