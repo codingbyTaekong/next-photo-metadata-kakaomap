@@ -14,13 +14,49 @@ model Area {
   idx  Int    @id @unique(map: "idx_UNIQUE") @default(autoincrement())
   name String @db.VarChar(100)
   type String @db.VarChar(45)
-  AreaPoint AreaPoint[]
+  circle Circle[]
+  polygon Polygon[]
+  rectangle Rectangle[]
+
+  @@map("AREA")
 }
 
-model AreaPoint {
-  idx Int    @id @unique(map: "idx_UNIQUE") @default(autoincrement())
-  lat String @db.VarChar(100)
-  lng String @db.VarChar(100)
+
+
+model Circle {
+  idx Int @id @unique(map: "idx_UNIQUE") @default(autoincrement())
+  centerX Float
+  centerY Float
+  radius Float
   areaId Int
-  area   Area @relation(fields: [areaId], references: [idx], onDelete: Cascade)
+  area   Area @relation(fields: [areaId], references: [idx], onDelete: NoAction)
+  @@map("CIRCLE")
+}
+
+model Polygon {
+  idx Int @id @unique(map: "idx_UNIQUE") @default(autoincrement())
+  areaId Int?
+  area   Area? @relation(fields: [areaId], references: [idx], onDelete: NoAction)
+  points PolygonPoints[]
+  @@map("POLYGON")
+}
+
+model PolygonPoints {
+  idx Int @id @unique(map: "idx_UNIQUE") @default(autoincrement())
+  x Float
+  y Float
+  polygonId Int
+  polygon Polygon @relation(fields: [polygonId], references: [idx])
+  @@map("POLYGONPOINTS")
+}
+
+model Rectangle {
+  idx Int @id @unique(map: "idx_UNIQUE") @default(autoincrement())
+  sPointX Float
+  sPointY Float
+  ePointX Float
+  ePointY Float
+  areaId Int
+  area   Area @relation(fields: [areaId], references: [idx], onDelete: NoAction)
+  @@map("RECTANGLE")
 }

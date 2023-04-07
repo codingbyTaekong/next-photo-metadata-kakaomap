@@ -1,5 +1,6 @@
+import axios from "axios";
 import { NextPage } from "next";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Map as KakaoMap, MapMarker, Circle, DrawingManager, useInjectKakaoMapApi } from "react-kakao-maps-sdk";
 
 type DrawingManagerType = kakao.maps.drawing.DrawingManager<
@@ -29,12 +30,22 @@ const Map : NextPage = () => {
     polyline: [],
     rectangle: [],
   })
-    const CircleRef = useRef<any>();
     const [load, setLoad] = useState(false)
     const [center, setCenter] = useState({
         lat : 37.85732475646546,
         lng : 127.72576266710679
     })
+
+    const [input, setInput] = useState({
+      name : ''
+    })
+
+    const onChangeInput = useCallback((e : React.ChangeEvent<HTMLInputElement>) => {
+      setInput((prev) => ({
+        ...prev,
+        [e.target.name] : e.target.value
+      }))
+    },[])
     useEffect(()=> {
         kakao.maps.load(()=> {
             setLoad(true)
@@ -70,13 +81,55 @@ const Map : NextPage = () => {
         manager?.select(type)
       }
 
-    const getDrawData = () => {
+    const getDrawData = async () => {
         const manager = managerRef.current
-        console.log(manager?.getData());
+        if (!input.name) {
+          return window.alert("구역 제목이 없습니다.")
+        }
+        if (manager?.getData().circle.length === 0 && manager?.getData().rectangle.length === 0 && manager?.getData().polygon.length === 0) {
+          return window.alert("구역을 활성화해주세요.")
+        }
+        const Rectangle = manager?.getData().rectangle.map(_rect => ({
+          sPointX : _rect.sPoint.x,
+          sPointY : _rect.sPoint.y,
+          ePointX : _rect.ePoint.x,
+          ePointY : _rect.ePoint.y
+        }))
+        const Circle = manager?.getData().circle.map(_circle => ({
+          centerX : _circle.center.x,
+          centerY : _circle.center.y,
+          radius : _circle.radius
+        }))
+        console.log(manager?.getData().polygon)
+        const polyPoint = manager?.getData().polygon.map((poly) => {
+          return poly.points.map((p)=> ({x : p.x, y : p.y}))
+        })
+        console.log(polyPoint);
+        console.log(Rectangle);
+        console.log(Circle);
+        const result =  await axios.post('/api/area/register', {
+          name : input.name,
+          circle : Circle,
+          rectangle : Rectangle,
+          polygon : polyPoint
+        })
+        console.log(result.data)
     }
+
+    
     return (
         <>
             <div ref={ContainerRef} className="ddd">안녕하세요</div>
+            <div>
+              <label htmlFor="">
+                <span>구역 이름</span>
+                <input type="text" name="name" id="" onChange={onChangeInput}/>
+              </label>
+              {/* <label htmlFor="">
+                <span>구역 이름</span>
+                <input type="text" name="" id="" />
+              </label> */}
+            </div>
             {load && 
             <>
                 <KakaoMap center={{lat: 37.85732475646546,
