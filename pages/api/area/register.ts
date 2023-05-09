@@ -9,14 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { type, name, polygon, rectangle, circle } = req.body;
-    // console.log(rectangle ,circle)
-    // 
     if (polygon.length !==0) {
-
-      // console.log(typeof polygon[0][0].x)
-      // console.log(polygon.length)
-      // console.log(rectangle.length)
-      // console.log(circle.length)
       const Area = await prismadb.area.create({
           data : {
               name,
@@ -45,9 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             circle : true,
           }
       })
-
-      return res.status(200)
-      // return res.status(200).json(Area)
+      return res.status(200).json(Area)
     } else {
       const Area = await prismadb.area.create({
         data : {

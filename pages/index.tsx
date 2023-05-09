@@ -21,12 +21,22 @@ const fetchArea =async ({queryKey} : any) => {
     return await (await axios.get('/api/area')).data
 }
 
+const getCenter = (area : AREA | undefined) => {
+    if (!area) {
+        throw new Error("구역 정보 없음");
+    }
+    const bounds = new kakao.maps.LatLngBounds()
+    area.circle.map((circle) => bounds.extend(new kakao.maps.LatLng(circle.centerY, circle.centerX)));
+    area.polygon.map((polygon) => polygon.points.map(_points => bounds.extend(new kakao.maps.LatLng(_points.y, _points.x))))
+    area.rectangle.map((rect) => {
+        bounds.extend(new kakao.maps.LatLng(rect.sPointY, rect.sPointX))
+        bounds.extend(new kakao.maps.LatLng(rect.ePointY, rect.ePointX))
+    })
+    return bounds
+}
+
 const Map : NextPage = () => {
     const ContainerRef = useRef<any>();
-    const testPosition = {
-        lat : 37.857248988949266,
-        lng : 127.72709140606275
-    }
     const [load, setLoad] = useState(false);
     const [overlayData, setOverlayData] = useState<AREA>();
     const [areas, setAreas] = useState<AREA[]>([]);
@@ -35,17 +45,29 @@ const Map : NextPage = () => {
         onSuccess : (data : AREA[]) => {
             // console.log(data)
             setAreas(data)
-            console.log("어디서 실행?2")
-            if (data.length >= 1 && !overlayData) setOverlayData(data[0])
+            
+            if (data.length >= 1 && !overlayData) {
+                console.log("데이터 로딩 완료")
+                setOverlayData(data[0])
+            }
         },
         
     })
-    
+
+
+    const setCenter = (map : kakao.maps.Map) => {
+        setTimeout(()=> {
+            const bounds = getCenter(overlayData);
+            map.setBounds(bounds)
+        }, 100)
+    }
 
     /** 구역 옵션 변경 핸들러 */
     const onChangeArea = (e : React.ChangeEvent<HTMLSelectElement>) => {
-        console.log("어디서 실행?1")
-        setOverlayData(areas.filter((area=> area.idx === parseInt(e.target.value)))[0])
+        const changedArea = areas.filter((area=> area.idx === parseInt(e.target.value)))[0]
+        setOverlayData(changedArea);
+        const bounds = getCenter(changedArea);
+        ContainerRef.current.setBounds(bounds)
     }
 
 
@@ -66,10 +88,6 @@ const Map : NextPage = () => {
         const y = point[1];
         let inside = false;
         for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-            // const xi = vs[i].getLat()
-            // const yi = vs[i].getLng()
-            // const xj = vs[j].getLat()
-            // const yj = vs[j].getLng()
             const xi = vs[i].y
             const yi = vs[i].x
             const xj = vs[j].y
@@ -114,7 +132,6 @@ const Map : NextPage = () => {
             wtmX = latitude,
             wtmY = longitude;
             
-            console.log("좌표정보", wtmX, wtmY)
             let isInside = false;
             /** 원이 있는 경우 */
             if (overlayData?.circle && overlayData.circle.length > 0 && CircleRef.current) {
@@ -171,7 +188,13 @@ const Map : NextPage = () => {
                 })
                 setUpload(true);
             } else {
-                window.alert("!!")
+                console.log(wtmX, wtmY)
+                setUploadCoordinate({
+                    lat : wtmX,
+                    lng : wtmY
+                })
+                setUpload(true);
+                // window.alert("!!")
             }
           })
         }
@@ -179,22 +202,6 @@ const Map : NextPage = () => {
     useEffect(()=> {
         kakao.maps.load(()=> {
             setLoad(true)
-            // const Circle = new kakao.maps.Circle({
-            //     radius : 50,
-            //     center : new kakao.maps.LatLng(center.lat, center.lng),
-            // })
-            // console.log(CircleRef.current)
-            // const circleCenter = Circle.getPosition();
-            // const circleRadius = Circle.getRadius();
-            // const path = [new kakao.maps.LatLng(testPosition.lat, testPosition.lng), circleCenter];
-            // const polyLine = new kakao.maps.Polyline({
-            //     path : path,
-            // })
-            // if (polyLine.getLength() >= circleRadius) {
-            //     console.log("범위 안에 없음")
-            // } else {
-            //     console.log("범위 안에 있음")
-            // }
         })
     },[])
     
@@ -213,8 +220,8 @@ const Map : NextPage = () => {
             </select>
             {load && overlayData &&
 
-                <KakaoMap ref={ContainerRef} center={{lat: 37.85732475646546,
-                    lng: 127.72576266710679}} level={3} style={{ width: "100%", height: "600px" }} onLoad={()=> console.log("로딩 완료")}>
+                <KakaoMap ref={ContainerRef} center={{lat: 38.85732475646546,
+                    lng: 127.72576266710679}} level={3} style={{ width: "100%", height: "600px" }} onCreate={(map) => setCenter(map)}>
                     { uploadCoordinate.lat !== 0 && uploadCoordinate.lng !== 0 && upload &&
                               <MapMarker // 마커를 생성합니다
                               position={{
@@ -222,7 +229,6 @@ const Map : NextPage = () => {
                                 lat: uploadCoordinate.lat,
                                 lng: uploadCoordinate.lng,
                               }}
-                              onCreate={()=> {}}
                             />
                     }
                     {

@@ -15,29 +15,22 @@ type DrawingManagerType = kakao.maps.drawing.DrawingManager<
 const Map : NextPage = () => {
     const ContainerRef = useRef<any>();
     const managerRef = useRef<DrawingManagerType>(null)
-    const testPosition = {
-        lat : 37.857248988949266,
-        lng : 127.72709140606275
-    }
-    const [overlayData, setOverlayData] = useState<
-    ReturnType<DrawingManagerType["getData"]>
-  >({
-    arrow: [],
-    circle: [],
-    ellipse: [],
-    marker: [],
-    polygon: [],
-    polyline: [],
-    rectangle: [],
-  })
     const [load, setLoad] = useState(false)
+    useEffect(()=> {
+      kakao.maps.load(()=> {
+          setLoad(true)
+      })
+  },[])
+
+    
     const [center, setCenter] = useState({
         lat : 37.85732475646546,
         lng : 127.72576266710679
     })
 
     const [input, setInput] = useState({
-      name : ''
+      name : '',
+      address : ''
     })
 
     const onChangeInput = useCallback((e : React.ChangeEvent<HTMLInputElement>) => {
@@ -46,42 +39,20 @@ const Map : NextPage = () => {
         [e.target.name] : e.target.value
       }))
     },[])
-    useEffect(()=> {
-        kakao.maps.load(()=> {
-            setLoad(true)
-            // 원에 포함되는 지
-            // const Circle = new kakao.maps.Circle({
-            //     radius : 50,
-            //     center : new kakao.maps.LatLng(center.lat, center.lng),
-            // })
-            // console.log(CircleRef.current)
-            // const circleCenter = Circle.getPosition();
-            // const circleRadius = Circle.getRadius();
-            // const path = [new kakao.maps.LatLng(testPosition.lat, testPosition.lng), circleCenter];
-            // const polyLine = new kakao.maps.Polyline({
-            //     path : path,
-            // })
-            // console.log(polyLine.getLength())
-            // if (polyLine.getLength() >= circleRadius) {
-            //     console.log("범위 안에 없음")
-            // } else {
-            //     console.log("범위 안에 있음")
-            // }
-        })
-    },[])
-    function selectOverlay(type:
+    
+    const selectOverlay = (type:
         | kakao.maps.drawing.OverlayType.CIRCLE
         | kakao.maps.drawing.OverlayType.ELLIPSE
         | kakao.maps.drawing.OverlayType.MARKER
         | kakao.maps.drawing.OverlayType.POLYLINE
         | kakao.maps.drawing.OverlayType.RECTANGLE
-        | kakao.maps.drawing.OverlayType.POLYGON) {
+        | kakao.maps.drawing.OverlayType.POLYGON) => {
         const manager = managerRef.current
         manager?.cancel()
         manager?.select(type)
       }
 
-    const getDrawData = async () => {
+    const registerDrawData = async () => {
         const manager = managerRef.current
         if (!input.name) {
           return window.alert("구역 제목이 없습니다.")
@@ -104,36 +75,56 @@ const Map : NextPage = () => {
         const polyPoint = manager?.getData().polygon.map((poly) => {
           return poly.points.map((p)=> ({x : p.x, y : p.y}))
         })
-        console.log(polyPoint);
-        console.log(Rectangle);
-        console.log(Circle);
         const result =  await axios.post('/api/area/register', {
           name : input.name,
           circle : Circle,
           rectangle : Rectangle,
           polygon : polyPoint
         })
-        console.log(result.data)
+        if (result.status === 200) {
+          // manager?.remove()
+          manager?.getData().rectangle.map((_rect) => manager.remove(_rect));
+          manager?.getData().polygon.map((polygon) => manager.remove(polygon));
+          manager?.getData().circle.map((circle) => manager.remove(circle));
+
+        }
     }
 
-    
+    const searchAddress = () => {
+      const geocoder = new kakao.maps.services.Geocoder();
+      geocoder.addressSearch(input.address , (result, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+
+          const coords = new kakao.maps.LatLng(Number(result[0].y), Number(result[0].x));
+
+          ContainerRef.current.setCenter(coords);
+          setInput({
+            ...input,
+            address : ''
+          })
+      } 
+      })
+    }
     return (
         <>
-            <div ref={ContainerRef} className="ddd">안녕하세요</div>
             <div>
               <label htmlFor="">
                 <span>구역 이름</span>
-                <input type="text" name="name" id="" onChange={onChangeInput}/>
+                <input type="text" name="name" id="" onChange={onChangeInput} value={input.name} />
               </label>
-              {/* <label htmlFor="">
-                <span>구역 이름</span>
-                <input type="text" name="" id="" />
-              </label> */}
+
+            </div>
+            <div>
+              <label htmlFor="">
+                <span>주소 검색</span>
+                <input type="text" name="address" id="" onChange={onChangeInput} value={input.address} />
+                <button onClick={searchAddress}>검색</button>
+              </label>
             </div>
             {load && 
             <>
                 <KakaoMap center={{lat: 37.85732475646546,
-                    lng: 127.72576266710679}} level={3} style={{ width: "100%", height: "600px" }}>
+                    lng: 127.72576266710679}} level={3} style={{ width: "100%", height: "600px" }} ref={ContainerRef}>
                     <DrawingManager
                         ref={managerRef}
                         drawingMode={[
@@ -212,24 +203,10 @@ const Map : NextPage = () => {
       >
         <button
           onClick={(e) => {
-            selectOverlay(kakao.maps.drawing.OverlayType.POLYLINE)
-          }}
-        >
-          선
-        </button>
-        <button
-          onClick={(e) => {
             selectOverlay(kakao.maps.drawing.OverlayType.CIRCLE)
           }}
         >
           원
-        </button>
-        <button
-          onClick={(e) => {
-            selectOverlay(kakao.maps.drawing.OverlayType.MARKER)
-          }}
-        >
-          마커
         </button>
         <button
           onClick={(e) => {
@@ -245,8 +222,8 @@ const Map : NextPage = () => {
         >
           사각형
         </button>
-        <button onClick={getDrawData}>
-            정보얻기
+        <button onClick={registerDrawData}>
+            구역 저장하기
         </button>
       </div>
             </>
